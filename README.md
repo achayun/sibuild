@@ -21,10 +21,10 @@ is just another `.inc.mk`. sibuild provides a rigid minimal spine; you compose t
 ## Principles
 
 - **Explicit over heuristic** - declared dependency graph; no `add_source`-style magic.
-- **One way to do things** - a single predictable build lifecycle that every module extends.
+- **Build lifecycle** - when strict ordering matters, mutually exclusive build phases that every module extends.
 - **Out-of-source, self-contained** - artifacts mirror the source tree under `BUILD_DIR`; `make clean` is `rm -rf build/`.
-- **Cross-compile first** - the host is just another target triple, to keeps builds reproducible.
-- **Isolated from the host** - no built-in rules and no ambient environment state leaking into the build.
+- **Cross-compile first** - the host is just another target triple, which keeps builds reproducible.
+- **Explicit and isolated** - no built-in `make` rules and no ambient environment state leaking into the build.
 - **Tooling-friendly** - emits `compile_commands.json` and a per-phase build journal for editors and CI.
 
 ## Tradeoffs
@@ -32,6 +32,8 @@ is just another `.inc.mk`. sibuild provides a rigid minimal spine; you compose t
 - Tools are not provisioned: system tools must already exist on `PATH`.
 - The `stats` / `clangd` / `clang-tidy` add-ons use `sqlite3` for bookkeeping.
 - By default no-extension binaries get a `.out` suffix. Read why in `ccxx.inc.mk`.
+
+## Makefiles
 
 | File | Provides |
 |---|---|
