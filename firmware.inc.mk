@@ -33,6 +33,12 @@ include $(SIBUILD_DIR)/ccxx.inc.mk
 CPPFLAGS += -flto -ffunction-sections -fdata-sections
 LDFLAGS  += -flto -Wl,--gc-sections -Wl,--print-memory-usage
 
+# Project arch flags (e.g. -march, -mcpu) are best scoped to the
+# targets they apply to rather than appended globally.
+# Bind to specific target or use`%`-pattern to scope a whole family:
+#   $(BUILD_DIR)/foo_%.elf: CPPFLAGS += $(FOO_ARCH_FLAGS)
+#   $(BUILD_DIR)/foo_%.elf: LDFLAGS  += -T $(FOO_LINKER_SCRIPT)
+
 # Implicit firmware rules:
 # Note: this file must be included *before* declaring targets:
 # ```

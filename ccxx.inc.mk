@@ -16,6 +16,18 @@ include $(SIBUILD_DIR)/build.inc.mk
 # * CXXFLAGS - Flags passed to C++ targets only
 # * ASMFLAGS - Flags passed to assembly (.S) targets
 # * LDFLAGS  - Flags passed to the linker
+#
+# *Note*: Prefer target-specific and pattern-specific variable values over changing the global variables.
+# A global `CFLAGS += ...` applies the flag to EVERY object in the build.
+# This behavior should be reserved for genuine project-wide policy (e.g. -std, -O2).
+# A flag that should effect a single target belongs on that target, as a target-specific value:
+#   $(BUILD_DIR)/app.out: CPPFLAGS += -DCONFIG_DIR='"..."'   # this target and its objects only
+# Make applies the value to the target and everything it depends on (the rules below read these
+# variables when compiling each object),
+# A `%`-pattern scopes a whole family the same way:
+#   $(BUILD_DIR)/test_%.out: CPPFLAGS += -DTESTING
+# Caveat: every source compiles to ONE object under BUILD_DIR, so a source shared by two targets
+# that want different per-target flags is compiled once, with whichever target is reached first.
 LIBS     ?=
 INC_DIRS ?=
 SYS_LIBS ?=
