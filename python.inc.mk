@@ -22,7 +22,7 @@ PYTHON ?= python3
 # * Shell variables are deferred with $$ so the venv is resolved at run time.
 # * The bin/ vs Scripts/ probe is only there to also work under Windows venvs.
 define py_venv
-	VENV_DIR="$(BUILD_DIR)/$(call rel,$(1))/venv"; \
+	@VENV_DIR="$(BUILD_DIR)/$(call rel,$(1))/venv"; \
 	if [ -x $$VENV_DIR/bin/python ]; then \
 		PYTHON_BIN=$$VENV_DIR/bin/python; \
 	elif [ -x $$VENV_DIR/Scripts/python.exe ]; then \

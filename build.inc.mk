@@ -29,7 +29,7 @@ export BUILD_DIR ?= $(PROJ_DIR)/build
 GNUMAKEFLAGS ?=
 
 # Strict make run with minimal assumptions
-MAKEFLAGS += --warn-undefined-variables --no-builtin-rules --no-builtin-variables
+MAKEFLAGS += --warn-undefined-variables --no-builtin-rules --no-builtin-variables --no-print-directory
 .SUFFIXES:			# Delete all default suffixes
 .SECONDARY:			# Do not delete intermediate targets, trust me, I am an engineer
 .DELETE_ON_ERROR:	# If a recipe fails, delete its (possibly half-written) target. Use .PRECIOUS to protect specific targets
