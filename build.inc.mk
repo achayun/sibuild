@@ -79,7 +79,7 @@ $(BUILD_DIR):
 	@$(MKDIR) $@
 
 # Build lifecycle PHASES. Run strictly in order, but work in a phase parallelizes under -j.
-PHASES := configure generate_sources collect_objects targets post_build
+PHASES = configure generate_sources collect_objects targets post_build
 .PHONY: build $(PHASES)
 
 # The top-level makefile, so each phase sub-make re-enters this same build.

@@ -4,6 +4,27 @@ All notable changes to sibuild are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-07-02
+
+Minor bugfix release
+
+### Fixes
+- Allow extending PHASES
+
+[1.0.2]: https://github.com/achayun/sibuild/releases/tag/v1.0.2
+
+## [1.0.1] - 2026-06-30
+
+Minor bugfix release
+
+### Fixes
+- Fixed a dependency issue with the git submodule Makefile. It now depends correctly on the submodule
+  index which should change in top repo pull
+- Some comments clarifying behavior
+- Silence VENV shell
+
+[1.0.1]: https://github.com/achayun/sibuild/releases/tag/v1.0.1
+
 ## [1.0.0] - 2026-06-18
 
 First public release: the consolidation of a Makefile collection refined over years
