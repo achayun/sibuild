@@ -89,6 +89,9 @@ endif
 CPPFLAGS += -MMD -MP
 -include $(shell [ -d $(BUILD_DIR) ] && find $(BUILD_DIR) -type 'f' -name '*.d')
 
+# Code size optimizations: Function and data sections by default
+CPPFLAGS += -ffunction-sections -fdata-sections
+
 # Group sorted libraries together to remove duplicates.
 # For GNU ld: whole-archive + a link group resolves circular dependencies and with
 # --gc-sections in LDFLAGS, lets unused sections be dropped in link time.
