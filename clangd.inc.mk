@@ -15,7 +15,6 @@ COMPILE_DB := $(BUILD_DIR)/compile_commands.db
 COMPILE_COMMANDS_JSON := $(BUILD_DIR)/compile_commands.json
 
 # Replace single quotes with double so a command embeds cleanly in SQL.
-# Must be '=' (recursive), not ':=' (immediate): $(1) is substituted at each $(call), not once now.
 replace_quotes = $(subst ',",$(1))
 
 # Override run_cmd to journal commands into build database. Keeps signature same as the base:
