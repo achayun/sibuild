@@ -4,6 +4,15 @@ All notable changes to sibuild are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.3] - 2026-07-13
+
+Added docker compatible tooling
+
+### Features
+docker.inc.mk is a preliminary implementation of building and running build commands
+in docker compatible CLIs (docker,podman,nerdctl). The implementation is derived from
+several working examples and may be suitable for only some cases.
+
 ## [1.0.2] - 2026-07-02
 
 Minor bugfix release
