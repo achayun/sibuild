@@ -1,6 +1,6 @@
 # sibuild: clangd integration.
 #
-# Journals every compile command into an sqlite database - $(BUILD_DIR)/compile_commands.db
+# Journals every build command into an sqlite database - $(BUILD_DIR)/compile_commands.db
 # exports a compile_commands.json # (https://clang.llvm.org/docs/JSONCompilationDatabase.html)
 # plus an include_path file for editors.
 ifeq "$(origin clangd_inc_mk)" "undefined"
@@ -14,6 +14,7 @@ include $(SIBUILD_DIR)/stats.inc.mk
 COMPILE_DB := $(BUILD_DIR)/compile_commands.db
 COMPILE_COMMANDS_JSON := $(BUILD_DIR)/compile_commands.json
 
+BUILD_HOSTNAME := $(shell hostname)
 # Replace single quotes with double so a command embeds cleanly in SQL.
 replace_quotes = $(subst ',",$(1))
 
@@ -22,8 +23,9 @@ replace_quotes = $(subst ',",$(1))
 define run_cmd
 	$(call log,$(1),$(2))
 	@$(MKDIR) $(dir $@)
-	@$(3) || { printf '[FAILED] %s\n' "$(3)" >&2; exit 1; }
-	@$(SQLITE) $(COMPILE_DB) "INSERT INTO build_compile_commands (build_ts, directory, file, output, command) VALUES ('$(START_TIME)', '$(CURDIR)', '$(abspath $<)', '$(abspath $@)', '$(call replace_quotes,$(3))');"
+	$(3); status=$$?; \
+	$(SQLITE) $(COMPILE_DB) "INSERT INTO build_compile_commands (build_ts, directory, file, output, command, pid, host, exit_code) VALUES ('$(START_TIME)', '$(CURDIR)', '$(abspath $<)', '$(abspath $@)', '$(call replace_quotes,$(3))', $$$$, '$(BUILD_HOSTNAME)', $$status);"; \
+	if [ $$status -ne 0 ]; then printf '[FAILED] %s\n' "$(3)" >&2; exit $$status; fi
 endef
 
 # compile_commands.db sqlite database. Schema is created during configure so tables exist before
@@ -33,7 +35,7 @@ endef
 configure:: $(COMPILE_DB)
 $(COMPILE_DB): | $(BUILD_DIR)
 	$(call log,SQL,$@)
-	@$(SQLITE) $(COMPILE_DB) "CREATE TABLE IF NOT EXISTS build_compile_commands (id INTEGER PRIMARY KEY, build_ts INT, directory TEXT, file TEXT, output TEXT, command TEXT);"
+	@$(SQLITE) $(COMPILE_DB) "CREATE TABLE IF NOT EXISTS build_compile_commands (id INTEGER PRIMARY KEY, build_ts INT, directory TEXT, file TEXT, output TEXT, command TEXT, pid INT, host TEXT, exit_code INT);"
 	@$(SQLITE) $(COMPILE_DB) "CREATE VIEW IF NOT EXISTS compile_commands AS SELECT a.* FROM build_compile_commands a JOIN (SELECT file, MAX(build_ts) AS max_timestamp FROM build_compile_commands WHERE output LIKE '%.o' GROUP BY file) b ON a.file = b.file AND a.build_ts = b.max_timestamp WHERE a.output LIKE '%.o';"
 
 $(COMPILE_COMMANDS_JSON): $(COMPILE_DB)
