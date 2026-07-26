@@ -5,8 +5,8 @@
 # Also prefills common firmware flags: LTO, dead-code elimination, and a flash/RAM usage report.
 #
 # Policy like: -std, optimization level, startup files and the arch flags are the project's choice.
-#   CROSS_COMPILE - the cross toolchain prefix.
-#                   On PATH:    riscv64-unknown-elf-   (tools found via PATH)
+#   CROSS_COMPILE - the cross toolchain path and prefix. For example:
+#                   On PATH:    riscv64-unknown-elf-
 #                   Off PATH:   /opt/riscv/bin/riscv64-unknown-elf-
 ifeq "$(origin firmware_inc_mk)" "undefined"
 firmware_inc_mk := defined
@@ -22,14 +22,13 @@ LD      := $(CROSS_COMPILE)ld
 RE      := $(CROSS_COMPILE)readelf
 OBJCOPY := $(CROSS_COMPILE)objcopy
 OD      := $(CROSS_COMPILE)objdump
-AR      := $(CROSS_COMPILE)gcc-ar
+AR      := $(CROSS_COMPILE)gcc-ar # AR is gcc-ar for LTO in .a files
 
 include $(SIBUILD_DIR)/ccxx.inc.mk
 
-# Firmware defaults, works across very different targets (e.g. RISC-V rv64 and AVR atmega):
-# LTO plus unreachable code elimination keep images small, and the linker reports flash/RAM usage.
+# Firmware defaults LTO plus unreachable code elimination keep images small,
+# and the linker reports flash/RAM usage.
 # Override in the project (e.g. CPPFLAGS += -fno-lto for debugging).
-# AR is gcc-ar (above) intentionally so archives of LTO objects link correctly.
 CPPFLAGS += -flto -ffunction-sections -fdata-sections
 LDFLAGS  += -flto -Wl,--gc-sections -Wl,--print-memory-usage
 
@@ -48,6 +47,10 @@ LDFLAGS  += -flto -Wl,--gc-sections -Wl,--print-memory-usage
 # ```
 # Why? Make expands $(BUILD_DIR) and $(call src_to_obj,...) at *parse* time, this is NOT
 # about rule order: Make reads every rule before building.
+
+# Linker scripts templated through C preprocessor Lets a .ld.in #include headers and use macros
+$(BUILD_DIR)/%.ld: $(PROJ_DIR)/%.ld.in
+	$(call run_cmd,LD-CPP,$(CC) $(CPPFLAGS) -E -P -x c -o $@ $<)
 
 # Links with $(LINK) - the C compiler by default; set LINK := $(CXX) for C++
 $(BUILD_DIR)/%.elf: $$(LIBS)
