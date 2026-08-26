@@ -4,6 +4,19 @@ All notable changes to sibuild are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.4] - 2026-08-26
+
+Documentation improvements
+
+### Features
+
+- Added bootstrapping documentation in README.md
+- Improved build journal to include `pid` and build host name for parallel build containers identification
+- Improved docker run and documentation
+- Added support for CPP templated .ld.in files for firmware
+
+
+
 ## [1.0.3] - 2026-07-13
 
 Added docker compatible tooling
