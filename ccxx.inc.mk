@@ -48,7 +48,7 @@ ifneq ($(filter default undefined,$(origin CXX)),)
 CXX := c++
 endif
 ifneq ($(filter default undefined,$(origin AR)),)
-AR := ar
+AR := ar # Note: Uses plain ar by default. For an LTO aware archive, override with gcc-ar or llvm-ar
 endif
 
 # Use compiler driver to link (not ld). Defaults to the C compiler; set to $(CXX) for C++ targets

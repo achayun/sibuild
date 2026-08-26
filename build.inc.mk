@@ -10,13 +10,8 @@ ifndef SIBUILD_DIR
 SIBUILD_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 endif
 
-.DEFAULT_GOAL = build
-
-# By default use the git top level, even when invoked from a submodule.
-export GIT_ROOT ?= $(abspath $(shell git rev-parse --show-toplevel 2>/dev/null))
-
-# Project root is the anchor for the whole source tree: By default the git top level.
-export PROJ_DIR ?= $(GIT_ROOT)
+# Project root is the anchor for the whole source tree; by default the git top level, even if invoked from a submodule.
+export PROJ_DIR ?= $(abspath $(shell git rev-parse --show-toplevel 2>/dev/null))
 
 ifeq ($(strip $(PROJ_DIR)),)
 $(error sibuild: PROJ_DIR is empty -- not a git repository? Set PROJ_DIR explicitly before including sibuild, e.g. PROJ_DIR := $$(CURDIR))
@@ -95,5 +90,7 @@ build::
 	@for phase in $(PHASES); do \
 		$(MAKE) --no-print-directory -f '$(sibuild_makefile)' $$phase || exit $$?; \
 	done
+
+.DEFAULT_GOAL = build
 
 endif # ifeq "$(origin build_inc_mk)" "undefined"

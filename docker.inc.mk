@@ -66,7 +66,7 @@ $(DOCKER_CLI) run --rm --pull=never \
     -w $(CURDIR) \
     -u $(shell id -u):$(shell id -g) \
     '$(1)' \
-    sh -lc '$(2)'
+    $(2)
 endef
 
 endif # ifeq "$(origin docker_inc_mk)" "undefined"

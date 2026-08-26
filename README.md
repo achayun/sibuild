@@ -69,6 +69,18 @@ targets:: $(BUILD_DIR)/app.out
 When sibuild is referenced as a dependency, say a submodule, a fresh `git clone` leaves it empty and the `include` fails.
 There are several suggested ways to bootstrap it.
 
+To add the code to the project, it first needs to be cloned. For example if the Makefiles in the project are inside the mk/ folder a command like:
+
+```
+git clone --depth 1 --branch 1.0.4 https://github.com/achayun/sibuild mk/sibuild
+```
+
+And to register it as a submodule (after cloning the specific tag above):
+
+```
+git submodule add https://github.com/achayun/sibuild mk/sibuild
+```
+
 **Manual init** -- Document that the project must be cloned with `git clone --recursive`,
 or that `git submodule update --init` has to be run once, or a custom bootstrap script.
 This costs the build nothing, but `--recursive` initializes every submodule in the tree
@@ -76,6 +88,21 @@ whether the build needs it or not, and it relies on the every reader not forgett
 
 The patterns below let the `Makefile` resolve sibuild on its own instead. The examples
 are for git submodule but both strategies can be used for other means.
+
+**Remaking rule** -- A missing `include` is a deferred, non-fatal error: make looks for a rule to build the file, runs it, then re-executes itself.
+
+```make
+SIBUILD_DIR := $(PROJ_DIR)/mk/sibuild
+
+$(SIBUILD_DIR)/%.inc.mk: $(SIBUILD_DIR)/.git
+	@:
+
+$(SIBUILD_DIR)/.git:
+	$(info [GIT] Bootstrapping $(@D))
+	@git submodule update --init -- $(@D)
+
+include $(SIBUILD_DIR)/build.inc.mk
+```
 
 **Parse-time guard** -- Runs before the first `include`, so one guard covers every sibuild
 file the tree pulls in, from wherever it is included:
@@ -94,33 +121,6 @@ endif
 
 include $(SIBUILD_DIR)/build.inc.mk
 ```
-
-This is the recommended approach. The `test -f` is what confirms the checkout: make caches
-directory listings for the whole run, so re-checking with `$(wildcard)` would still report
-the file as missing.
-
-**Remaking rule** -- A missing `include` is a deferred, non-fatal error: make looks for a rule
-to build the file, runs it, then re-executes itself.
-
-```make
-SIBUILD_DIR := $(PROJ_DIR)/mk/sibuild
-
-$(SIBUILD_DIR)/build.inc.mk:
-	@git submodule update --init -- $(SIBUILD_DIR)
-	@test -f $@ || { echo "error: failed to initialize $(@D)" >&2; exit 1; }
-
-include $(SIBUILD_DIR)/build.inc.mk
-```
-
-This is only practical when the project includes a single sibuild file. Make decides whether a missing
-makefile is buildable *before* it runs any recipe, so every sibuild file included anywhere in
-the tree needs a target of its own - listed in this rule or given a separate one - otherwise
-make aborts on the first one it cannot build, even though an earlier recipe would already have
-checked it out. Each target must also match its `include` string character for character, since
-a relative target does not satisfy an absolute `include`. Under `-j`, make remakes makefiles in
-parallel, turning several missing includes into concurrent `git submodule update` calls that
-race each other.
-
 
 For quickstart, concepts, a full reference, and runnable examples - host, library + tests,
 code generation, cross-compiled firmware - see **[sibuild-examples](https://github.com/achayun/sibuild-examples)**.
