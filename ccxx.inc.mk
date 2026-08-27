@@ -60,12 +60,12 @@ LINK ?= $(CC)
 CPPFLAGS += -Warray-bounds -Wall -Wextra -Wshadow -Wunused -Werror=return-type -Wimplicit-fallthrough -Wwrite-strings -Wno-comment -Wno-address-of-packed-member -Wno-missing-braces -Wmissing-declarations
 CFLAGS   += -Werror=implicit-function-declaration -Wstrict-prototypes -Wmissing-prototypes
 
-CC_VERSION := $(shell $(CC) --version)
-ifeq "$(findstring clang,$(CC_VERSION))" "clang"
-	CFLAGS += -Wzero-length-array
-else
-	CFLAGS += -Wzero-length-bounds
-endif
+# Get the compiler version from banner, uses lazy evaluation to allow cross compile setup
+CC_VERSION = $(shell $(CC) --version)
+
+CFLAGS += $(if $(findstring clang,$(CC_VERSION)),\
+	-Wzero-length-array,\
+	-Wzero-length-bounds)
 
 # Accept modern C conventions by default: fixed-width integers (uint8_t ...),
 # size_t/NULL and bool. All three are freestanding headers that compilers provide
@@ -96,15 +96,11 @@ CPPFLAGS += -ffunction-sections -fdata-sections
 # For GNU ld: whole-archive + a link group resolves circular dependencies and with
 # --gc-sections in LDFLAGS, lets unused sections be dropped in link time.
 # Clang supports neither, just pass the sorted list.
-ifeq "$(findstring clang,$(CC_VERSION))" "clang"
-define group_libs
-$(sort $(1))
-endef
-else
-define group_libs
--Wl,--whole-archive -Wl,--start-group $(sort $(1)) -Wl,--end-group -Wl,--no-whole-archive
-endef
-endif
+GNU_LD_GROUP = -Wl,--whole-archive -Wl,--start-group $(1) -Wl,--end-group -Wl,--no-whole-archive
+
+group_libs = $(if $(findstring clang,$(CC_VERSION)),\
+	$(sort $(1)),\
+	$(call GNU_LD_GROUP,$(sort $(1))))
 
 # Shorthand to map source files to their object files in BUILD_DIR.
 # Objects are compiled to BUILD_DIR path mirroring the source path relative to PROJ_DIR.
