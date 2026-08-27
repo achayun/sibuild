@@ -43,8 +43,8 @@ DOCKER_CLI_AUTO := $(firstword $(foreach c,docker podman nerdctl,$(shell command
 DOCKER_CLI ?= $(or $(strip $(DOCKER_CLI_AUTO)),$(error no container CLI found. Set DOCKER_CLI e.g. docker/podman/nerdctl))
 
 # Build an image from Dockerfile. Provide tag and optional build options per image
-$(BUILD_DIR)/%/Dockerfile.docker-image: DOCKER_BUILD_OPTS ?=
-$(BUILD_DIR)/%/Dockerfile.docker-image: $(PROJ_DIR)/%/Dockerfile
+$(BUILD_DIR)%Dockerfile.docker-image: DOCKER_BUILD_OPTS ?=
+$(BUILD_DIR)%Dockerfile.docker-image: $(PROJ_DIR)%Dockerfile
 	$(call log,DOCKER,$<)
 	@$(MKDIR) $(dir $@)
 	@$(DOCKER_CLI) build -t '$(DOCKER_IMAGE_NAME)' -f '$<' \
@@ -52,6 +52,9 @@ $(BUILD_DIR)/%/Dockerfile.docker-image: $(PROJ_DIR)/%/Dockerfile
 		$(DOCKER_BUILD_OPTS) \
 		'$(dir $<)'
 	@$(DOCKER_CLI) image inspect '$(DOCKER_IMAGE_NAME)' -f '{{.Id}}' > $@
+
+# Helper to literalize a comma (,) when passing into docker_run below
+comma ?= ,
 
 # Run a command in a pre-built docker image, aligning with DOCKER_IMAGE_NAME provided for build.
 # $(call container_run,<image>,<command>[,<extra-run-args>])
