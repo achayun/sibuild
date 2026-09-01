@@ -11,47 +11,44 @@ SIBUILD_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 endif
 include $(SIBUILD_DIR)/stats.inc.mk
 
-COMPILE_DB := $(BUILD_DIR)/compile_commands.db
+COMPILE_COMMANDS_DB := $(BUILD_DIR)/compile_commands.db
 COMPILE_COMMANDS_JSON := $(BUILD_DIR)/compile_commands.json
 
 BUILD_HOSTNAME := $(shell hostname)
 # Replace single quotes with double so a command embeds cleanly in SQL.
 replace_quotes = $(subst ',",$(1))
 
-# Override run_cmd to journal commands into build database. Keeps signature same as the base:
-#	$(call run_cmd,$(1)=tag, $(2)=shown path, $(3)=command)
-define run_cmd
+# Override build_cmd to journal commands into build database:
+#	$(call build_cmd,$(1)=tag, $(2)=shown path, $(3)=command)
+define build_cmd
 	$(call log,$(1),$(2))
 	@$(MKDIR) $(dir $@)
-	$(3); status=$$?; \
-	$(SQLITE) $(COMPILE_DB) "INSERT INTO build_compile_commands (build_ts, directory, file, output, command, pid, host, exit_code) VALUES ('$(START_TIME)', '$(CURDIR)', '$(abspath $<)', '$(abspath $@)', '$(call replace_quotes,$(3))', $$$$, '$(BUILD_HOSTNAME)', $$status);"; \
+	@$(3); status=$$?; \
+	$(SQLITE) $(COMPILE_COMMANDS_DB) "INSERT INTO build_commands (build_ts, directory, file, output, command, pid, host, exit_code) VALUES ('$(START_TIME)', '$(CURDIR)', '$(abspath $<)', '$(abspath $@)', '$(call replace_quotes,$(3))', $$$$, '$(BUILD_HOSTNAME)', $$status);"; \
 	if [ $$status -ne 0 ]; then printf '[FAILED] %s\n' "$(3)" >&2; exit $$status; fi
 endef
 
-# compile_commands.db sqlite database. Schema is created during configure so tables exist before
-# run_cmd journals the first command. `build_compile_commands` journals every command (a
-# general-purpose build journal); the `compile_commands` view narrows it to TUs (translation units);
-# the latest .o-producing command per source for compile_commands.json.
-configure:: $(COMPILE_DB)
-$(COMPILE_DB): | $(BUILD_DIR)
+# compile_commands.db sqlite database. Schema is created during configure before
+# build_cmd journals the first command. `build_commands` journals every build command
+# `compile_commands` view selects only latest .o TUs (translation units) for compile_commands.json
+configure:: $(COMPILE_COMMANDS_DB)
+$(COMPILE_COMMANDS_DB): | $(BUILD_DIR)
 	$(call log,SQL,$@)
-	@$(SQLITE) $(COMPILE_DB) "CREATE TABLE IF NOT EXISTS build_compile_commands (id INTEGER PRIMARY KEY, build_ts INT, directory TEXT, file TEXT, output TEXT, command TEXT, pid INT, host TEXT, exit_code INT);"
-	@$(SQLITE) $(COMPILE_DB) "CREATE VIEW IF NOT EXISTS compile_commands AS SELECT a.* FROM build_compile_commands a JOIN (SELECT file, MAX(build_ts) AS max_timestamp FROM build_compile_commands WHERE output LIKE '%.o' GROUP BY file) b ON a.file = b.file AND a.build_ts = b.max_timestamp WHERE a.output LIKE '%.o';"
+	@$(SQLITE) $(COMPILE_COMMANDS_DB) "CREATE TABLE IF NOT EXISTS build_commands (id INTEGER PRIMARY KEY, build_ts INT, directory TEXT, file TEXT, output TEXT, command TEXT, pid INT, host TEXT, exit_code INT);"
+	@$(SQLITE) $(COMPILE_COMMANDS_DB) "CREATE VIEW IF NOT EXISTS compile_commands AS SELECT a.* FROM build_commands a JOIN (SELECT file, MAX(build_ts) AS max_timestamp FROM build_commands WHERE output LIKE '%.o' GROUP BY file) b ON a.file = b.file AND a.build_ts = b.max_timestamp WHERE a.output LIKE '%.o';"
 
-$(COMPILE_COMMANDS_JSON): $(COMPILE_DB)
+$(COMPILE_COMMANDS_JSON): $(COMPILE_COMMANDS_DB)
 	$(call log,JSON,$@)
 	@$(SQLITE) -readonly -json $< "SELECT command,directory,file,output FROM compile_commands;" > $@
 
 post_build:: $(COMPILE_COMMANDS_JSON)
 
-# clangd-config: optionally write a minimal .clangd at the project root:
-#   CompilationDatabase - point clangd at BUILD_DIR to support custom BUILD_DIR as clangd already finds ./ and ./build.
-#   QueryDriver         - the resolved $(CC)/$(CXX) paths, so clangd discovers the
-#                         toolchain's system headers and target without guessing.
-# Everything else is the developer's, and belongs in their own .clangd or ~/.config/clangd/config.yaml.
-# Run: make clangd-config
-.PHONY: clangd-config
-clangd-config:
+# dot-clangd: generate a scaffold .clangd at the project root:
+#   CompilationDatabase - point clangd at BUILD_DIR (clangd already finds ./ and ./build).
+#   QueryDriver         - resolved $(CC)/$(CXX) paths
+# Run: make dot-clangd
+.PHONY: dot-clangd
+dot-clangd:
 	$(call log,GEN,$(PROJ_DIR)/.clangd)
 	@{ \
 	  printf 'CompileFlags:\n'; \
@@ -59,12 +56,5 @@ clangd-config:
 	  drivers=$$({ command -v $(CC); command -v $(CXX); } 2>/dev/null | sort -u | paste -sd, -); \
 	  if [ -n "$$drivers" ]; then printf '  QueryDriver: [%s]\n' "$$drivers"; fi; \
 	} > $(PROJ_DIR)/.clangd
-
-# include_path file - Tell editors where to look for headers (one comma-separated line of dirs).
-INCLUDE_PATH_FILE := $(BUILD_DIR)/include_path
-$(INCLUDE_PATH_FILE):
-	$(call log,INC,$@)
-	@realpath . | tr '\n' ',' > $@
-	@echo "$(INC_DIRS) $(INC)" | sed -e 's/-I//g' | xargs realpath | sort -u -r | tr '\n' ',' >> $@
 
 endif # ifeq "$(origin clangd_inc_mk)" "undefined"

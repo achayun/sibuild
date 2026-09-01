@@ -4,6 +4,21 @@ All notable changes to sibuild are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.7] - 2026-09-02
+
+Reproducible build
+
+**Warning** run_cmd was renamed to build_cmd, so if used outside sibuild this would be a breaking change.
+Unpleasant but better to do this early on when there are no still no usages.
+
+### Fixes
+- ar .a implicit rule now removes the old archive before creating the new one so removed entries are not kept in the archive.
+
+### Features
+In preparation for the attic, several reproducible build concepts were added:
+- SOURCE_DATE_EPOCH for deterministic date and time across builds (derived from last git commit)
+- GCC only - LTO frandom-seed derived from file path in the project
+
 ## [1.0.6] - 2026-08-28
 Fixes: Postpone compiler version with lazy evaluation
 

@@ -9,11 +9,10 @@ SIBUILD_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 endif
 include $(SIBUILD_DIR)/build.inc.mk
 
-BUILD_DB := $(BUILD_DIR)/build.db
-
-# sqlite invocation with a busy timeout, so parallel (-j) jobs writing the
-# journal wait for the lock instead of failing with "database is locked".
+# sqlite3 default with busy wait for parallel (-j) jobs writing shared databases preventing "database is locked" error
 SQLITE ?= sqlite3 -cmd ".timeout 10000"
+
+BUILD_DB := $(BUILD_DIR)/build.db
 
 configure:: $(BUILD_DB)
 

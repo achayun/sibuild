@@ -42,7 +42,7 @@ endif
 DOCKER_CLI_AUTO := $(firstword $(foreach c,docker podman nerdctl,$(shell command -v $(c) 2>/dev/null)))
 DOCKER_CLI ?= $(or $(strip $(DOCKER_CLI_AUTO)),$(error no container CLI found. Set DOCKER_CLI e.g. docker/podman/nerdctl))
 
-# Build an image from Dockerfile. Provide tag and optional build options per image
+# Build an image from Dockerfile. Provide tag and optional build options per image.
 $(BUILD_DIR)%Dockerfile.docker-image: DOCKER_BUILD_OPTS ?=
 $(BUILD_DIR)%Dockerfile.docker-image: $(PROJ_DIR)%Dockerfile
 	$(call log,DOCKER,$<)
@@ -50,8 +50,18 @@ $(BUILD_DIR)%Dockerfile.docker-image: $(PROJ_DIR)%Dockerfile
 	@$(DOCKER_CLI) build -t '$(DOCKER_IMAGE_NAME)' -f '$<' \
 		--progress=quiet \
 		$(DOCKER_BUILD_OPTS) \
-		'$(dir $<)'
+		'$(dir $<)' >/dev/null
 	@$(DOCKER_CLI) image inspect '$(DOCKER_IMAGE_NAME)' -f '{{.Id}}' > $@
+
+
+# Trust git folder in Docker by default since Docker VirtioFS driver may report the bind-mount
+# to be owned by root
+# Set DOCKER_GIT_SAFE_DIRECTORY= to override
+DOCKER_GIT_SAFE_DIRECTORY ?= *
+docker_git_safe_env = $(if $(strip $(DOCKER_GIT_SAFE_DIRECTORY)),\
+    -e GIT_CONFIG_COUNT=1 \
+    -e GIT_CONFIG_KEY_0=safe.directory \
+    -e 'GIT_CONFIG_VALUE_0=$(DOCKER_GIT_SAFE_DIRECTORY)')
 
 # Helper to literalize a comma (,) when passing into docker_run below
 comma ?= ,
@@ -65,6 +75,7 @@ define docker_run
 $(DOCKER_CLI) run --rm --pull=never \
        --mount type=bind,src=/etc/localtime,dst=/etc/localtime,ro \
        --mount type=bind,src=$(PROJ_DIR),dst=$(PROJ_DIR) \
+	$(docker_git_safe_env) \
     $(3) \
     -w $(CURDIR) \
     -u $(shell id -u):$(shell id -g) \
