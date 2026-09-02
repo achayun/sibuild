@@ -7,18 +7,29 @@ build_inc_mk := defined
 # ?= is recursively expanded, so $(lastword ...) would be re-evaluated later and point at the wrong file
 # := captures value once, conditionally with ifndef
 ifndef SIBUILD_DIR
-SIBUILD_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+    SIBUILD_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 endif
 
-# Project root is the anchor for the whole source tree; by default the git top level, even if invoked from a submodule.
-export PROJ_DIR ?= $(abspath $(shell git rev-parse --show-toplevel 2>/dev/null))
+# PROJ_DIR - Project root is the anchor for the source tree; by default the git top level, even if invoked from a submodule.
+ifndef PROJ_DIR
+    PROJ_DIR := $(shell git rev-parse --show-toplevel 2>/dev/null)
+endif
+# Normalize given / set path
+override PROJ_DIR := $(abspath $(PROJ_DIR))
+export PROJ_DIR
 
 ifeq ($(strip $(PROJ_DIR)),)
-$(error sibuild: PROJ_DIR is empty -- not a git repository? Set PROJ_DIR explicitly before including sibuild, e.g. PROJ_DIR := $$(CURDIR))
+    $(error sibuild: PROJ_DIR is empty -- not a git repository? Set PROJ_DIR explicitly before including sibuild, e.g. PROJ_DIR := $$(CURDIR))
 endif
 
-# Output and intermediate artifacts directory.
-export BUILD_DIR ?= $(PROJ_DIR)/build
+# BUILD_DIR - Output and intermediate artifacts directory.
+ifndef BUILD_DIR
+    BUILD_DIR := $(PROJ_DIR)/build
+endif
+# Normalize given / set path
+override BUILD_DIR := $(abspath $(BUILD_DIR))
+export BUILD_DIR
+
 
 # GNU Make 4.4 references GNUMAKEFLAGS while rebuilding MAKEFLAGS. Define to prevent warning.
 GNUMAKEFLAGS ?=
@@ -69,7 +80,7 @@ at_proj = $(foreach f,$(1),$(if $(filter /%,$(f)),$(f),$(PROJ_DIR)/$(f)))
 # (e.g. util.c -> util.c.o, util.cxx -> util.cxx.o).
 to_build_target = $(addprefix $(BUILD_DIR)/,$(call rel,$(addsuffix $(1),$(call at_proj,$(2)))))
 
-# log: a progress line: $(call log,TAG,msg).
+# log: Kbuild-style terse progress line: $(call log,TAG,msg).
 # Uses printf rather than $(info) so lines appear in execution order with parallel (-j) builds.
 log = @printf '  %-4s %s\n' '$(strip $(1))' '$(call rel,$(2))'
 
