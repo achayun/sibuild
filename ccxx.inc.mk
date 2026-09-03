@@ -19,15 +19,17 @@ include $(SIBUILD_DIR)/build.inc.mk
 #
 # *Note*: Prefer target-specific and pattern-specific variable values over changing the global variables.
 # A global `CFLAGS += ...` applies the flag to EVERY object in the build.
-# This behavior should be reserved for genuine project-wide policy (e.g. -std, -O2).
-# A flag that should effect a single target belongs on that target, as a target-specific value:
-#   $(BUILD_DIR)/app.out: CPPFLAGS += -DCONFIG_DIR='"..."'   # this target and its objects only
-# Make applies the value to the target and everything it depends on (the rules below read these
-# variables when compiling each object),
-# A `%`-pattern scopes a whole family the same way:
-#   $(BUILD_DIR)/test_%.out: CPPFLAGS += -DTESTING
+# This behavior should be reserved for project-wide default policy (e.g. -std, -O2).
+# A flag that should effect a single target can be a target-specific value:
+#   $(BUILD_DIR)/app.out: CPPFLAGS += -DCONFIG_DIR='"..."'
+# Make applies the value to the target and its dependencies.
+# A `%`-pattern affects a whole family:
+#   $(BUILD_DIR)/test_%.out: CPPFLAGS += -O0 -DDEBUG
+# An explicit target variable takes precedence over implicit targets. See:
+#     https://www.gnu.org/software/make/manual/html_node/Pattern_002dspecific.html
+#
 # Caveat: every source compiles to ONE object under BUILD_DIR, so a source shared by two targets
-# that want different per-target flags is compiled once, with whichever target is reached first.
+# that declare different per-target flags is compiled once, with flags of whichever target is reached first.
 LIBS     ?=
 INC_DIRS ?=
 SYS_LIBS ?=
@@ -38,9 +40,7 @@ ASMFLAGS ?=
 LDFLAGS  ?=
 
 # Default tools. 'cc'/'c++' resolve to the system compiler (clang on macOS, gcc on Linux).
-# Pinned here: --no-builtin-variables suppresses Make's defaults at recipe-expansion time,
-# but plain ?= skip the assignment (a recipe would then see an empty CC). Conditional assign
-# allows override by cross-toolchain file, or a command-line 'make CC=...
+# override by cross-toolchain file, or a command-line 'make CC=...
 ifneq ($(filter default undefined,$(origin CC)),)
 CC := cc
 endif
@@ -115,7 +115,7 @@ CPPFLAGS += -ffile-prefix-map=$(PROJ_DIR)=.
 collect_objects:: $$(LIBS)
 
 # Implicit object rules. The folder structure under BUILD_DIR mirrors the source
-# tree so identically named files never collide and pattern matching stays simple.
+# tree so identically named files never collide and simplifies pattern matching.
 $(BUILD_DIR)/%.c.o: $(PROJ_DIR)/%.c
 	$(call build_cmd,CC,$<,$(CC) $(CPPFLAGS) $(CFLAGS) $(INC) -c -o $@ $<)
 
@@ -126,8 +126,8 @@ $(BUILD_DIR)/%.S.o: $(PROJ_DIR)/%.S
 	$(call build_cmd,AS,$<,$(CC) $(CPPFLAGS) $(ASMFLAGS) $(INC) -c -o $@ $<)
 
 # Generated sources (e.g. code-generation) reside in BUILD_DIR
-# They compile with the same rules mirroring the rules above with a BUILD_DIR prefix.
-# The duplicity is annoying but allows for clear artifact organization in BUILD_DIR.
+# Compile with the same rules mirroring the rules above with a BUILD_DIR prefix.
+# The duplicity is annoying but allows for clear artifact organization in BUILD_DIR without vpath.
 $(BUILD_DIR)/%.c.o: $(BUILD_DIR)/%.c
 	$(call build_cmd,CC,$<,$(CC) $(CPPFLAGS) $(CFLAGS) $(INC) -c -o $@ $<)
 

@@ -63,7 +63,7 @@ endif
 export SOURCE_DATE_EPOCH
 
 # Shell tools behavior. '--' guards against paths starting with '-'.
-MKDIR = mkdir -p
+MKDIR = mkdir -p --
 RM = rm -rf --
 
 # Convert an absolute path relative to project, by stripping PROJ_DIR or BUILD_DIR prefix.
