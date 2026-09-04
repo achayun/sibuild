@@ -87,12 +87,13 @@ log = @printf '  %-4s %s\n' '$(strip $(1))' '$(call rel,$(2))'
 # Wrapper to run a build command:
 #     $(call build_cmd,$(1)=log tag, $(2)=log message (usually path), $(3)=command)
 # Logs the command, makes the output directory, executes the command quietly, and prints the full command on failure.
-# Weak define (ifndef) to allow override (e.g clangd.inc.mk)
+# Weak define (ifndef) to allow override.
+# Also, extensible by `build_cmd += ...`
 ifndef build_cmd
 define build_cmd
 	$(call log,$(1),$(2))
 	@$(MKDIR) $(dir $@)
-	@$(3) || { printf '[FAILED] %s\n' "$(3)" >&2; exit 1; }
+	@$(3) || { printf '[FAILED] %s\n' "$(3)" >&2; exit 1; };
 endef
 endif
 
