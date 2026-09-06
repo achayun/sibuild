@@ -4,6 +4,20 @@ All notable changes to sibuild are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-09-06
+
+The artifact attic - journal build outputs in a git repository
+
+### Features
+
+- `attic.inc.mk` - archives successful build artifacts (tracked in build.db) in a git
+  repository (default under `BUILD_DIR`).
+- `builddb.inc.mk` - the build journal, split out of `clangd.inc.mk`.
+
+### Fixes
+
+- Properly quote shell commands when INSERT into build.db.
+
 ## [1.0.7] - 2026-09-02
 
 Reproducible build

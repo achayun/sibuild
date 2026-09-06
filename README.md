@@ -1,36 +1,35 @@
 # sibuild
 
-**A uniform, multi-target build foundation for C/C++ that makes modern standards,
-good practices, and reproducible results the default.**
+**A consistent, reproducible C/C++ build foundation.*+
 
-The name **sibuild** nods to SI (International System of Units): a small, shared vocabulary of precise primitives that scales consistently.
+sibuild is a collection of `*.inc.mk` files to include from your `Makefile`, scaling from a
+one-file host tool to a cross-compiled, multi-phase, multi-target firmware project using
+a consistent foundation. Based on plain GNU Make. Reproducible build pinned tools with no ambient system state.
+Built for C and C++, but the lifecycle, project model and tooling are not C-specific.
 
-A collection of `*.inc.mk` files to include from your `Makefile`, scaling from a
-one-file host tool to a cross-compiled, multi-phase, multi-target firmware tree on
-one consistent model. Plain Make, with strict defaults, so the build does exactly what is written;
-parallel-safe (`-j`) and reproducible. Pinned tools, no ambient system state, all
-artifacts out of tree. Built for C and C++, but the lifecycle, path model and
-tooling are not C-specific.
-
-Complex builds use the same primitives: in a multi-module tree with code
+Complex builds can leverage the same primitives: in a multi-module tree with code
 generation, baked data and mixed host/cross toolchains, the phased lifecycle keeps
 generation → compilation → linking strictly ordered (even under `-j`), generated
 sources compile straight out of `BUILD_DIR`, and any project-specific tooling
-is just another `.inc.mk`. sibuild provides a rigid minimal spine; you compose the assembly.
+can be added on top. sibuild provides a rigid minimal spine allowing you to compose the assembly.
+
+The name **sibuild** nods to SI (International System of Units): a small, shared vocabulary of precise primitives that scales consistently.
 
 ## Principles
 
-- **Explicit over heuristic** - declared dependency graph; no `add_source`-style magic.
+- **Explicit over heuristic** - declared dependency graph; no built-in `make` rules and no ambient environment state leaking into the build.
 - **Build lifecycle** - when strict ordering matters, mutually exclusive build phases that every module extends.
 - **Out-of-source, self-contained** - artifacts mirror the source tree under `BUILD_DIR`; `make clean` is `rm -rf build/`.
-- **Cross-compile first** - the host is just another target triple, which keeps builds reproducible.
-- **Explicit and isolated** - no built-in `make` rules and no ambient environment state leaking into the build.
-- **Tooling-friendly** - emits `compile_commands.json` and a per-phase build journal for editors and CI.
+- **Cross-compile** -Build patterns for deployable code across wide range of toolchains.
+- **Isolated and reproducible** - Reproducible artifacts via strict flags and tooling for build in Docker-equivalent for pinned build tools.
+- **IDE-friendly** - emits `compile_commands.json` for editors and linters.
+- **Developer tools** - Build journal and artifact attic to allow evidence derived development.
 
 ## Tradeoffs
 
 - Tools are not provisioned: system tools must already exist on `PATH`.
-- The `stats` / `clangd` / `clang-tidy` add-ons use `sqlite3` for bookkeeping.
+- The build.db journal use `sqlite3` for bookkeeping.
+- Build commands are wrapped with `build_cmd` for logging, journaling, and extensions.
 - By default no-extension binaries get a `.out` suffix. Read why in `ccxx.inc.mk`.
 
 ## Makefiles
@@ -40,9 +39,11 @@ is just another `.inc.mk`. sibuild provides a rigid minimal spine; you compose t
 | `build.inc.mk` | Build lifecycle phases, system tool configuration. Path helpers |
 | `ccxx.inc.mk` | C/C++/asm rules, default warnings, produces static libraries `%.a`, and binaries `%.out` |
 | `firmware.inc.mk` | cross-toolchain (`CROSS_COMPILE`), produces embedded binaries `%.elf` / `.bin` / `.hex` / `.dis` |
-| `stats.inc.mk` | sqlite3 build journal + per-phase timing |
-| `clangd.inc.mk` | sqlite3 compilation commands journal renders `compile_commands.json` for editors |
+| `builddb.inc.mk` | journal build commands in sqlite3 database |
+| `stats.inc.mk` | per-phase timing |
+| `clangd.inc.mk` | renders `compile_commands.json` for editors |
 | `clang-tidy.inc.mk` | Post build `make clang-tidy` |
+| `attic.inc.mk` | archives build artifacts in a git repo |
 | `python.inc.mk` | run Python based build tools in a per-directory venv |
 | `submodule.inc.mk` | lazy `git submodule` checkout |
 
@@ -127,7 +128,8 @@ code generation, cross-compiled firmware - see **[sibuild-examples](https://gith
 
 ## Requirements
 
-GNU Make ≥ 3.81; `sqlite3` for the `stats` / `clangd` add-ons.
+- GNU Make ≥ 3.81
+- sqlite3 ≥ 3.25 for build.db
 See each `*.inc.mk` for its specific requirements.
 
 ## License
