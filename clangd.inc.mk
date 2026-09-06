@@ -12,10 +12,10 @@ include $(SIBUILD_DIR)/builddb.inc.mk
 
 COMPILE_COMMANDS_JSON := $(BUILD_DIR)/compile_commands.json
 
-# `compile_commands` view: select the latest command per TU (translation unit), i.e. only .o outputs
-$(BUILD_DB): BUILD_DB_SCHEMA += CREATE VIEW compile_commands AS SELECT a.* FROM build_commands a JOIN (SELECT file, MAX(build_ts) AS max_timestamp FROM build_commands WHERE output LIKE '%.o' GROUP BY file) b ON a.file = b.file AND a.build_ts = b.max_timestamp WHERE a.output LIKE '%.o';
+# `compile_commands` view: the latest command per TU (translation unit), i.e. only .o outputs.
+$(BUILD_DB): BUILD_DB_SCHEMA += CREATE VIEW IF NOT EXISTS compile_commands AS SELECT * FROM build_commands WHERE id IN (SELECT MAX(id) FROM build_commands WHERE output LIKE '%.o' GROUP BY file);
 
-$(COMPILE_COMMANDS_JSON):
+$(COMPILE_COMMANDS_JSON): $(BUILD_DB)
 	$(call log,JSON,$@)
 	@$(SQLITE) -readonly -json $(BUILD_DB) "SELECT command,directory,file,output FROM compile_commands;" > $@
 

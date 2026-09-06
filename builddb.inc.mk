@@ -13,33 +13,34 @@ SQLITE ?= sqlite3 -cmd ".timeout 10000"
 
 BUILD_DB := $(BUILD_DIR)/build.db
 
+ifndef BUILD_HOSTNAME
 BUILD_HOSTNAME := $(shell hostname)
+endif
+export BUILD_HOSTNAME
 
 # Escape both for SQL ' and shell special characters $`" to record the command verbatim
 cmd_esc = $(subst $$,\$$,$(subst `,\`,$(subst ",\",$(subst ','',$(1)))))
 
-# Build command wrapper extension -- log successful commands into the journal
-build_cmd += $(SQLITE) $(BUILD_DB) "INSERT INTO build_commands (build_ts, kind, directory, file, output, command, pid, host) VALUES ('$(START_TIME)', '$(strip $(1))', '$(CURDIR)', '$(abspath $<)', '$(abspath $@)', '$(call cmd_esc,$(3))', $$$$, '$(BUILD_HOSTNAME)');";
+# Build command wrapper extension -- log commands into the journal
+build_cmd_post += $(SQLITE) $(BUILD_DB) "INSERT INTO build_commands (build_ts, kind, directory, file, output, command, pid, host, exit_code) VALUES ('$(START_TIME)', '$(strip $(1))', '$(CURDIR)', '$(abspath $<)', '$(abspath $@)', '$(call cmd_esc,$(3))', $$$$, '$(BUILD_HOSTNAME)', $$build_status);"
 
 # The primary key is build_time - START_TIME from build.inc.mk
-$(BUILD_DB): BUILD_DB_SCHEMA += CREATE TABLE IF NOT EXISTS build_commands (id INTEGER PRIMARY KEY, build_ts INT, kind TEXT, directory TEXT, file TEXT, output TEXT, command TEXT, pid INT, host TEXT);
+$(BUILD_DB): BUILD_DB_SCHEMA += CREATE TABLE IF NOT EXISTS build_commands (id INTEGER PRIMARY KEY, build_ts INT, kind TEXT, directory TEXT, file TEXT, output TEXT, command TEXT, pid INT, host TEXT, exit_code INT);
 $(BUILD_DB): BUILD_DB_SCHEMA += CREATE INDEX IF NOT EXISTS build_commands_by_build ON build_commands (build_ts);
 
 # `builds` table identifies a full build run against git status
 $(BUILD_DB): BUILD_DB_SCHEMA += CREATE TABLE IF NOT EXISTS builds (build_ts INT PRIMARY KEY, proj_dir TEXT, build_dir TEXT, src_head TEXT, src_branch TEXT, src_dirty INT, host TEXT);
 
-# Recursively expanded on purpose: these run git, and they are referenced only
-# from the build-db-schema recipe, so they cost three processes per build rather
-# than three per makefile parse (the phases re-parse it once each).
+# Git tree state
 db_src_head   = $(shell git -C $(PROJ_DIR) rev-parse --short HEAD 2>/dev/null)
 db_src_branch = $(shell git -C $(PROJ_DIR) rev-parse --abbrev-ref HEAD 2>/dev/null)
 db_src_dirty  = $(shell git -C $(PROJ_DIR) status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 
-# Create the database schema. Extend by adding to the target-specific variable e.g.
-# $(BUILD_DB): BUILD_DB_SCHEMA += ...
+# Create the database schema. Extend by adding to the target-specific variable
+# e.g. $(BUILD_DB): BUILD_DB_SCHEMA += ...
 $(BUILD_DB): | $(BUILD_DIR)
 	$(call log,SQL,$@)
-	@$(SQLITE) $(BUILD_DB) "$(BUILD_DB_SCHEMA)"
+	@$(SQLITE) $@ "$(BUILD_DB_SCHEMA)"
 
 # Register every build start in the database
 .PHONY: builddb-build-start
